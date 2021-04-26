@@ -16,18 +16,21 @@
 
 package com.google.samples.propertyanimation
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ObjectAnimator
+import android.animation.*
 import android.animation.ObjectAnimator.ofArgb
-import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator.ofArgb
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
+import android.view.ViewAnimationUtils
+import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.LinearInterpolator
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
+import androidx.appcompat.widget.AppCompatImageView
 
 
 class MainActivity : AppCompatActivity() {
@@ -80,11 +83,11 @@ class MainActivity : AppCompatActivity() {
     private fun disableViewWhileAnimation(view: View, animator: ObjectAnimator) {
         animator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator?) {
-                view.isEnabled = false
+                view.isEnabled = true
             }
 
             override fun onAnimationStart(animation: Animator?) {
-                view.isEnabled = true
+                view.isEnabled = false
             }
         })
     }
@@ -142,7 +145,80 @@ class MainActivity : AppCompatActivity() {
         animator.start()
     }
 
+    private fun createNewStar(): AppCompatImageView {
+        val newStar = AppCompatImageView(this)
+        newStar.setImageResource(R.drawable.ic_star)
+        newStar.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        )
+        return newStar
+    }
+
+    private fun createStarSizeAndPosition(
+        newStar: AppCompatImageView,
+        container: ViewGroup
+    ): Pair<Float, Float> {
+        var starW = star.width.toFloat()
+        var starH = star.height.toFloat()
+        newStar.scaleX = Math.random().toFloat() * 1.5f + .1f
+        newStar.scaleY = newStar.scaleX
+        starW *= newStar.scaleX
+        starH *= newStar.scaleY
+        //star position
+        newStar.translationX = Math.random().toFloat() *
+                container.width - starW / 2
+
+        return Pair(starW, starH)
+    }
+
+    private fun createAnimationFall(
+        newStar: AppCompatImageView,
+        starH: Float,
+        container: ViewGroup
+    ): Animator {
+        //create animation falling for the star
+        val mover = ObjectAnimator.ofFloat(
+            newStar, View.TRANSLATION_Y,
+            -starH, container.height + starH
+        )
+        mover.interpolator = AccelerateInterpolator(1f)
+        return mover
+    }
+
+    private fun createAnimationRotate(newStar: AppCompatImageView): Animator {
+        //create animation rotate for the star
+        val rotator = ObjectAnimator.ofFloat(
+            newStar, View.ROTATION,
+            (Math.random() * 1080).toFloat()
+        )
+        rotator.interpolator = LinearInterpolator()
+        return rotator
+    }
+
     private fun shower() {
+        val container = star.parent as ViewGroup
+        //create new star.
+        val newStar = createNewStar()
+        //add the created star to the container
+        container.addView(newStar)
+        //create star size and position.
+        val (starW, starH) = createStarSizeAndPosition(newStar, container)
+        //create falling animation for the star
+        val mover = createAnimationFall(newStar, starH, container)
+        //create rotator animation for the star
+        val rotator = createAnimationRotate(newStar)
+
+        //create multiple animation in parallel like rotate and move ..
+        val set = AnimatorSet()
+        set.playTogether(mover, rotator)
+        set.duration = (Math.random() * 1500 + 500).toLong()
+        set.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator?) {
+                container.removeView(newStar)
+            }
+        })
+        set.start()
     }
 
 }
